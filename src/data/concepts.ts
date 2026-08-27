@@ -1,3 +1,5 @@
+import type { OptionType } from "@/lib/blackScholes";
+
 export type ConceptKind = "price" | "greek";
 export type MetricKey = "price" | "delta" | "gamma" | "theta" | "vega" | "rho";
 
@@ -11,6 +13,17 @@ export interface Concept {
   hook: string;
   definition: string;
   unit: string;
+  /** LaTeX for the closed-form Black-Scholes formula, shown by the "Show math" toggle. */
+  formula: (optionType: OptionType) => string;
+}
+
+// Shared d1/d2 definition, appended under every formula so each card is
+// self-contained (matches the notation from the reference notes).
+const D1_D2 =
+  "d_1 = \\dfrac{\\ln(S/K) + \\left(r - q + \\frac{\\sigma^2}{2}\\right)T}{\\sigma\\sqrt{T}}, \\quad d_2 = d_1 - \\sigma\\sqrt{T}";
+
+function withD1D2(mainLine: string): string {
+  return `\\begin{gathered} ${mainLine} \\\\[10pt] ${D1_D2} \\end{gathered}`;
 }
 
 export const concepts: Concept[] = [
@@ -24,6 +37,12 @@ export const concepts: Concept[] = [
     definition:
       "The Black-Scholes fair value of the option — what you'd theoretically pay (or receive) for it today, given the underlying price, strike, time left, volatility, and interest rate. As expiry approaches, this curve collapses onto the payoff diagram: the kinked line showing what the option is worth at expiry, with no time value left.",
     unit: "$ per share",
+    formula: (type) =>
+      withD1D2(
+        type === "call"
+          ? "C = S e^{-qT} N(d_1) - K e^{-rT} N(d_2)"
+          : "P = K e^{-rT} N(-d_2) - S e^{-qT} N(-d_1)"
+      ),
   },
   {
     id: "delta",
@@ -35,6 +54,12 @@ export const concepts: Concept[] = [
     definition:
       "Delta measures the option's sensitivity to the underlying price. A call's delta ranges from 0 (deep out-of-the-money) to 1 (deep in-the-money); a put's ranges from -1 to 0. It's also commonly read as an approximate probability the option finishes in-the-money, and as the number of shares you'd need to hold to hedge one option contract.",
     unit: "$ per $1 move in spot",
+    formula: (type) =>
+      withD1D2(
+        type === "call"
+          ? "\\Delta_C = e^{-qT} N(d_1)"
+          : "\\Delta_P = e^{-qT}\\big(N(d_1) - 1\\big) = -e^{-qT} N(-d_1)"
+      ),
   },
   {
     id: "gamma",
@@ -46,6 +71,7 @@ export const concepts: Concept[] = [
     definition:
       "Gamma is the rate of change of delta — the option's 'acceleration.' It's identical for a call and a put at the same strike (put-call parity). Gamma peaks for at-the-money options close to expiry, which is exactly when a hedged position becomes hardest to keep balanced: delta can swing violently on small moves in the stock.",
     unit: "Δ change per $1 move in spot",
+    formula: () => withD1D2("\\Gamma = \\dfrac{e^{-qT}\\,\\varphi(d_1)}{S\\,\\sigma\\sqrt{T}}"),
   },
   {
     id: "theta",
@@ -57,6 +83,12 @@ export const concepts: Concept[] = [
     definition:
       "Theta is time decay — the daily erosion of an option's extrinsic (time) value as expiry approaches, holding everything else fixed. It's usually negative for a long option (you're paying for time) and is the namesake concept behind this project: Chronos, time itself, steadily working against the option buyer.",
     unit: "$ per day",
+    formula: (type) =>
+      withD1D2(
+        type === "call"
+          ? "\\Theta_C = -\\dfrac{S e^{-qT}\\varphi(d_1)\\sigma}{2\\sqrt{T}} - rKe^{-rT}N(d_2) + qSe^{-qT}N(d_1)"
+          : "\\Theta_P = -\\dfrac{S e^{-qT}\\varphi(d_1)\\sigma}{2\\sqrt{T}} + rKe^{-rT}N(-d_2) - qSe^{-qT}N(-d_1)"
+      ),
   },
   {
     id: "vega",
@@ -68,6 +100,7 @@ export const concepts: Concept[] = [
     definition:
       "Vega measures sensitivity to volatility (not an actual Greek letter, borrowed for the family). Options are bets on how much the underlying will move, so a rise in implied volatility raises both call and put prices — vega is identical for calls and puts at the same strike, and is largest for at-the-money options with plenty of time left.",
     unit: "$ per 1pt change in IV",
+    formula: () => withD1D2("\\text{Vega} = S\\,e^{-qT}\\,\\varphi(d_1)\\,\\sqrt{T}"),
   },
   {
     id: "rho",
@@ -79,5 +112,7 @@ export const concepts: Concept[] = [
     definition:
       "Rho measures sensitivity to the risk-free interest rate. It's usually the smallest of the Greeks in practice and matters most for long-dated options (LEAPS): higher rates raise call values and lower put values, since the strike's present value shifts with the discount rate.",
     unit: "$ per 1pt change in rates",
+    formula: (type) =>
+      withD1D2(type === "call" ? "\\rho_C = KTe^{-rT}N(d_2)" : "\\rho_P = -KTe^{-rT}N(-d_2)"),
   },
 ];

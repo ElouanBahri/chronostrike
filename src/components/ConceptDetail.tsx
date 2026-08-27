@@ -1,9 +1,11 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import type { BlackScholesInputs, OptionType } from "@/lib/blackScholes";
 import type { Concept } from "@/data/concepts";
 import GreekChart from "./GreekChart";
+import MathBlock from "./MathBlock";
 
 interface ConceptDetailProps {
   concept: Concept;
@@ -13,6 +15,8 @@ interface ConceptDetailProps {
 }
 
 export default function ConceptDetail({ concept, inputs, optionType, onClose }: ConceptDetailProps) {
+  const [showMath, setShowMath] = useState(false);
+
   return (
     <motion.div
       layoutId={`card-${concept.id}`}
@@ -28,12 +32,24 @@ export default function ConceptDetail({ concept, inputs, optionType, onClose }: 
             <p className="text-sm text-muted-foreground">{concept.unit}</p>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-accent hover:text-foreground"
-        >
-          Close
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowMath((v) => !v)}
+            className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+              showMath
+                ? "border-accent bg-accent text-accent-foreground"
+                : "border-border text-muted-foreground hover:border-accent hover:text-foreground"
+            }`}
+          >
+            {showMath ? "Hide math" : "Show math"}
+          </button>
+          <button
+            onClick={onClose}
+            className="rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-accent hover:text-foreground"
+          >
+            Close
+          </button>
+        </div>
       </div>
 
       <motion.p
@@ -44,6 +60,19 @@ export default function ConceptDetail({ concept, inputs, optionType, onClose }: 
       >
         {concept.definition}
       </motion.p>
+
+      <AnimatePresence>
+        {showMath && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 overflow-hidden"
+          >
+            <MathBlock latex={concept.formula(optionType)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="mt-6">
         <div className="mb-2 flex items-center gap-4 text-xs text-muted-foreground">

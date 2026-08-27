@@ -36,7 +36,7 @@ export default function ConceptCard({ concept, inputs, optionType, isSelected, o
         <p className="mt-1 text-sm text-muted-foreground">{concept.hook}</p>
       </div>
       <div className="mt-auto pt-2 font-mono text-sm text-foreground">
-        {value.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+        {value.toLocaleString("en-US", { maximumFractionDigits: 4 })}
       </div>
     </motion.button>
   );

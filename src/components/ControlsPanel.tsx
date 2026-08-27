@@ -14,6 +14,10 @@ export interface ControlsState {
 interface ControlsPanelProps {
   state: ControlsState;
   onChange: (state: ControlsState) => void;
+  /** Strategies have their own per-leg call/put and relative strikes, so the
+   * single global strike slider and call/put toggle don't apply there. */
+  hideStrike?: boolean;
+  hideOptionTypeToggle?: boolean;
 }
 
 interface SliderRowProps {
@@ -32,7 +36,7 @@ function SliderRow({ label, value, min, max, step, suffix = "", onChange }: Slid
       <div className="flex items-baseline justify-between text-sm">
         <span className="text-muted-foreground">{label}</span>
         <span className="font-mono font-medium text-foreground">
-          {value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          {value.toLocaleString("en-US", { maximumFractionDigits: 2 })}
           {suffix}
         </span>
       </div>
@@ -49,7 +53,12 @@ function SliderRow({ label, value, min, max, step, suffix = "", onChange }: Slid
   );
 }
 
-export default function ControlsPanel({ state, onChange }: ControlsPanelProps) {
+export default function ControlsPanel({
+  state,
+  onChange,
+  hideStrike = false,
+  hideOptionTypeToggle = false,
+}: ControlsPanelProps) {
   const set = <K extends keyof ControlsState>(key: K, value: ControlsState[K]) =>
     onChange({ ...state, [key]: value });
 
@@ -57,21 +66,23 @@ export default function ControlsPanel({ state, onChange }: ControlsPanelProps) {
     <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6">
       <div className="mb-5 flex items-center justify-between">
         <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">Controls</h3>
-        <div className="inline-flex overflow-hidden rounded-full border border-border text-xs font-medium">
-          {(["call", "put"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => set("optionType", t)}
-              className={`px-3 py-1.5 capitalize transition-colors ${
-                state.optionType === t
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        {!hideOptionTypeToggle && (
+          <div className="inline-flex overflow-hidden rounded-full border border-border text-xs font-medium">
+            {(["call", "put"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => set("optionType", t)}
+                className={`px-3 py-1.5 capitalize transition-colors ${
+                  state.optionType === t
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -79,20 +90,22 @@ export default function ControlsPanel({ state, onChange }: ControlsPanelProps) {
           label="Underlying price (S)"
           value={state.spot}
           min={1}
-          max={state.strike * 2}
+          max={hideStrike ? 500 : state.strike * 2}
           step={0.5}
           suffix=" $"
           onChange={(v) => set("spot", v)}
         />
-        <SliderRow
-          label="Strike price (K)"
-          value={state.strike}
-          min={1}
-          max={500}
-          step={1}
-          suffix=" $"
-          onChange={(v) => set("strike", v)}
-        />
+        {!hideStrike && (
+          <SliderRow
+            label="Strike price (K)"
+            value={state.strike}
+            min={1}
+            max={500}
+            step={1}
+            suffix=" $"
+            onChange={(v) => set("strike", v)}
+          />
+        )}
         <SliderRow
           label="Time to expiry"
           value={state.daysToExpiry}
